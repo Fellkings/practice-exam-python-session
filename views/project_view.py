@@ -1,6 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
-from datetime import datetime
+from tkinter import ttk, messagebox, simpledialog, scrolledtext
+from datetime import datetime, timedelta
 from models.project import Project
 
 
@@ -84,7 +84,6 @@ class ProjectView(ttk.Frame):
 
     def refresh_projects(self) -> None:
         try:
-            # Очистка таблицы
             for item in self.tree.get_children():
                 self.tree.delete(item)
             
@@ -234,9 +233,10 @@ class ProjectFormDialog:
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Новый проект" if not project else "Редактирование проекта")
-        self.dialog.geometry("400x300")
+        self.dialog.geometry("500x400")
         self.dialog.transient(parent)
         self.dialog.grab_set()
+        self.dialog.minsize(450, 350)
         
         self._create_widgets()
         
@@ -249,45 +249,68 @@ class ProjectFormDialog:
         main_frame = ttk.Frame(self.dialog, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        ttk.Label(main_frame, text="Название проекта*:").grid(row=0, column=0, 
-                                                            sticky=tk.W, pady=5)
+        main_frame.columnconfigure(1, weight=1)
+        main_frame.rowconfigure(1, weight=1)
+        main_frame.rowconfigure(5, weight=0)
+        
+        ttk.Label(main_frame, text="Название проекта*:").grid(
+            row=0, column=0, sticky=tk.W, pady=5)
         self.name_var = tk.StringVar()
-        ttk.Entry(main_frame, textvariable=self.name_var, width=30).grid(
-            row=0, column=1, sticky=tk.W, pady=5)
+        name_entry = ttk.Entry(main_frame, textvariable=self.name_var)
+        name_entry.grid(row=0, column=1, sticky=tk.EW, pady=5)
+        name_entry.focus_set()
         
-        ttk.Label(main_frame, text="Описание:").grid(row=1, column=0, 
-                                                    sticky=tk.W, pady=5)
-        self.description_text = tk.Text(main_frame, width=30, height=4)
-        self.description_text.grid(row=1, column=1, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Описание:").grid(
+            row=1, column=0, sticky=tk.NW, pady=5)
+        self.description_text = scrolledtext.ScrolledText(
+            main_frame, height=4, wrap=tk.WORD)
+        self.description_text.grid(row=1, column=1, sticky=tk.NSEW, pady=5)
         
-        ttk.Label(main_frame, text="Дата начала* (ГГГГ-ММ-ДД):").grid(row=2, column=0, 
-                                                                    sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Дата начала* (ГГГГ-ММ-ДД):").grid(
+            row=2, column=0, sticky=tk.W, pady=5)
         self.start_date_var = tk.StringVar(value=datetime.now().strftime("%Y-%m-%d"))
-        ttk.Entry(main_frame, textvariable=self.start_date_var, width=30).grid(
-            row=2, column=1, sticky=tk.W, pady=5)
+        ttk.Entry(main_frame, textvariable=self.start_date_var).grid(
+            row=2, column=1, sticky=tk.EW, pady=5)
         
-        ttk.Label(main_frame, text="Дата окончания* (ГГГГ-ММ-ДД):").grid(row=3, column=0, 
-                                                                       sticky=tk.W, pady=5)
-        default_end_date = datetime.now().replace(month=datetime.now().month + 1)
+        ttk.Label(main_frame, text="Дата окончания* (ГГГГ-ММ-ДД):").grid(
+            row=3, column=0, sticky=tk.W, pady=5)
+        default_end_date = datetime.now() + timedelta(days=30)
         self.end_date_var = tk.StringVar(value=default_end_date.strftime("%Y-%m-%d"))
-        ttk.Entry(main_frame, textvariable=self.end_date_var, width=30).grid(
-            row=3, column=1, sticky=tk.W, pady=5)
-        
-        ttk.Label(main_frame, text="Статус:").grid(row=4, column=0, 
-                                                  sticky=tk.W, pady=5)
+        ttk.Entry(main_frame, textvariable=self.end_date_var).grid(
+            row=3, column=1, sticky=tk.EW, pady=5)
+            
+        ttk.Label(main_frame, text="Статус:").grid(
+            row=4, column=0, sticky=tk.W, pady=5)
         self.status_var = tk.StringVar(value="active")
-        status_combo = ttk.Combobox(main_frame, textvariable=self.status_var,
-                                   values=["active", "completed", "on_hold"],
-                                   state="readonly", width=15)
+        status_combo = ttk.Combobox(
+            main_frame, 
+            textvariable=self.status_var,
+            values=["active", "completed", "on_hold"],
+            state="readonly"
+        )
         status_combo.grid(row=4, column=1, sticky=tk.W, pady=5)
         
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=5, column=0, columnspan=2, pady=(20, 10))
         
-        ttk.Button(button_frame, text="Сохранить", 
-                  command=self._save_project).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Отмена", 
-                  command=self.dialog.destroy).pack(side=tk.LEFT, padx=5)
+        save_btn = ttk.Button(
+            button_frame, 
+            text="Сохранить", 
+            command=self._save_project,
+            width=15
+        )
+        save_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        cancel_btn = ttk.Button(
+            button_frame, 
+            text="Отмена", 
+            command=self.dialog.destroy,
+            width=15
+        )
+        cancel_btn.pack(side=tk.LEFT)
+        
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(2, weight=1)
 
     def _populate_form(self):
         if not self.project:
@@ -295,11 +318,38 @@ class ProjectFormDialog:
         
         self.name_var.set(self.project.name)
         self.description_text.delete(1.0, tk.END)
-        self.description_text.insert(1.0, self.project.description)
+        self.description_text.insert(1.0, self.project.description or "")
         self.status_var.set(self.project.status)
         
-        self.start_date_var.set(self.project.start_date.strftime("%Y-%m-%d"))
-        self.end_date_var.set(self.project.end_date.strftime("%Y-%m-%d"))
+        if isinstance(self.project.start_date, datetime):
+            self.start_date_var.set(self.project.start_date.strftime("%Y-%m-%d"))
+        elif isinstance(self.project.start_date, str):
+            try:
+                date_obj = datetime.fromisoformat(self.project.start_date.replace('Z', '+00:00'))
+                self.start_date_var.set(date_obj.strftime("%Y-%m-%d"))
+            except:
+                self.start_date_var.set(datetime.now().strftime("%Y-%m-%d"))
+        else:
+            try:
+                self.start_date_var.set(self.project.start_date.strftime("%Y-%m-%d"))
+            except:
+                self.start_date_var.set(datetime.now().strftime("%Y-%m-%d"))
+
+        if isinstance(self.project.end_date, datetime):
+            self.end_date_var.set(self.project.end_date.strftime("%Y-%m-%d"))
+        elif isinstance(self.project.end_date, str):
+            try:
+                date_obj = datetime.fromisoformat(self.project.end_date.replace('Z', '+00:00'))
+                self.end_date_var.set(date_obj.strftime("%Y-%m-%d"))
+            except:
+                default_end_date = datetime.now() + timedelta(days=30)
+                self.end_date_var.set(default_end_date.strftime("%Y-%m-%d"))
+        else:
+            try:
+                self.end_date_var.set(self.project.end_date.strftime("%Y-%m-%d"))
+            except:
+                default_end_date = datetime.now() + timedelta(days=30)
+                self.end_date_var.set(default_end_date.strftime("%Y-%m-%d"))
 
     def _save_project(self):
         try:
@@ -307,24 +357,42 @@ class ProjectFormDialog:
                 messagebox.showerror("Ошибка", "Введите название проекта")
                 return
             
-            if not self.start_date_var.get():
-                messagebox.showerror("Ошибка", "Введите дату начала")
-                return
-            
-            if not self.end_date_var.get():
-                messagebox.showerror("Ошибка", "Введите дату окончания")
-                return
-
             name = self.name_var.get().strip()
             description = self.description_text.get(1.0, tk.END).strip()
             status = self.status_var.get()
             
-            start_date = datetime.strptime(self.start_date_var.get(), "%Y-%m-%d")
-            end_date = datetime.strptime(self.end_date_var.get(), "%Y-%m-%d")
+            start_date_str = self.start_date_var.get().strip()
+            end_date_str = self.end_date_var.get().strip()
+            
+            if not start_date_str:
+                messagebox.showerror("Ошибка", "Введите дату начала")
+                return
+            
+            if not end_date_str:
+                messagebox.showerror("Ошибка", "Введите дату окончания")
+                return
+            
+            try:
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            except ValueError:
+                messagebox.showerror("Ошибка", 
+                    "Некорректный формат даты начала. Используйте ГГГГ-ММ-ДД (например: 2025-12-19)")
+                return
+            
+            try:
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            except ValueError:
+                messagebox.showerror("Ошибка", 
+                    "Некорректный формат даты окончания. Используйте ГГГГ-ММ-ДД (например: 2025-12-19)")
+                return
             
             if start_date >= end_date:
                 messagebox.showerror("Ошибка", "Дата начала должна быть раньше даты окончания")
                 return
+            
+            print(f"Сохранение проекта: {name}")
+            print(f"Дата начала: {start_date} (тип: {type(start_date)})")
+            print(f"Дата окончания: {end_date} (тип: {type(end_date)})")
             
             if self.project:
                 success = self.project_controller.update_project(
@@ -339,17 +407,27 @@ class ProjectFormDialog:
                     messagebox.showerror("Ошибка", "Не удалось обновить проект")
                     return
             else:
-                self.project_controller.add_project(
-                    name=name,
-                    description=description,
-                    start_date=start_date,
-                    end_date=end_date
-                )
+                try:
+                    new_project = self.project_controller.add_project(
+                        name=name,
+                        description=description,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    print(f"Проект создан с ID: {new_project.id}")
+                except ValueError as e:
+                    messagebox.showerror("Ошибка валидации", str(e))
+                    return
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось создать проект: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    return
             
             self.result = True
             self.dialog.destroy()
-            
-        except ValueError as e:
-            messagebox.showerror("Ошибка", f"Некорректный формат даты. Используйте ГГГГ-ММ-ДД")
+
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось сохранить проект: {e}")
+            import traceback
+            traceback.print_exc()

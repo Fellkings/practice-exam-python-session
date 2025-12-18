@@ -1,5 +1,6 @@
 import tempfile
 import os
+import time
 import pytest
 from datetime import datetime, timedelta
 from database.database_manager import DatabaseManager
@@ -9,14 +10,64 @@ from models.user import User
 
 
 class TestDatabaseManager:
-    
+
     def setup_method(self):
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
-        self.db = DatabaseManager(self.temp_db.name)
+        self.db_file = self.temp_db.name
+        self.temp_db.close()
+        
+        self.db = DatabaseManager(self.db_file)
 
     def teardown_method(self):
+            if hasattr(self, 'db') and self.db:
+                try:
+                    self.db.connection.close()
+                except:
+                    pass
+
+                try:
+                    self.db.close()
+                except:
+                    pass
+            
+            time.sleep(0.05)
+
+            if hasattr(self, 'db_file') and self.db_file:
+                for attempt in range(5):
+                    try:
+                        if os.path.exists(self.db_file):
+                            os.unlink(self.db_file)
+                        break
+                    except (PermissionError, OSError):
+                        if attempt < 4:
+                            time.sleep(0.1)
+                        continue
+            
+            if hasattr(self, 'temp_db'):
+                try:
+                    self.temp_db.close()
+                except:
+                    pass
+
+    def test_close_and_reopen(self):
+        user = User(
+            username="testuser",
+            email="test@example.com",
+            role="developer"
+        )
+        user_id = self.db.add_user(user)
+
         self.db.close()
-        os.unlink(self.temp_db.name)
+
+        new_db = DatabaseManager(self.db_file)
+        
+        retrieved = new_db.get_user_by_id(user_id)
+        assert retrieved is not None
+        assert retrieved.username == "testuser"
+        assert retrieved.email == "test@example.com"
+        assert retrieved.role == "developer"
+        
+        new_db.close()
 
     def test_create_tables(self):
         cursor = self.db.connection.cursor()
@@ -791,20 +842,152 @@ class TestDatabaseManager:
             email="user1@example.com",
             role="developer"
         )
-        
+
         user2 = User(
             username="user2",
             email="user2@example.com",
             role="manager"
         )
-        
+
         self.db.add_user(user1)
         self.db.add_user(user2)
-        
+
         results = self.db.fetch_all("SELECT * FROM users ORDER BY username")
-        assert isinstance(results, list)
-        assert len(results) >= 2
         
-        usernames = [row['username'] for row in results]
-        assert "user1" in usernames
-        assert "user2" in usernames
+        assert len(results) == 2
+        assert results[0]['username'] == "user1"
+        assert results[1]['username'] == "user2"
+
+    def test_get_overdue_tasks(self):
+        user = User(
+            username="testuser",
+            email="test@example.com",
+            role="developer"
+        )
+        user_id = self.db.add_user(user)
+        
+        project = Project(
+            name="Test Project",
+            description="Test Description",
+            start_date=datetime.now(),
+            end_date=datetime.now() + timedelta(days=30)
+        )
+        project_id = self.db.add_project(project)
+        
+        cursor = self.db.connection.cursor()
+        
+        cursor.execute("PRAGMA table_info(tasks)")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+        print(f"Columns in tasks table: {column_names}")
+        
+        now = datetime.now()
+        
+        if 'created_at' in column_names:
+            cursor.execute("""
+                INSERT INTO tasks (title, description, priority, due_date, 
+                                project_id, assignee_id, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "Overdue Task",
+                "Already overdue",
+                1,
+                (now - timedelta(days=1)).isoformat(),
+                user_id,
+                "pending",
+                now.isoformat()
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO tasks (title, description, priority, due_date, 
+                                project_id, assignee_id, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "Overdue Task",
+                "Already overdue",
+                1,
+                (now - timedelta(days=1)).isoformat(),
+                project_id,
+                user_id,
+                "pending"
+            ))
+        
+        if 'created_at' in column_names:
+            cursor.execute("""
+                INSERT INTO tasks (title, description, priority, due_date, 
+                                project_id, assignee_id, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "Future Task",
+                "Not overdue",
+                2,
+                (now + timedelta(days=1)).isoformat(),
+                project_id,
+                user_id,
+                "pending",
+                now.isoformat()
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO tasks (title, description, priority, due_date, 
+                                project_id, assignee_id, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "Future Task",
+                "Not overdue",
+                2,
+                (now + timedelta(days=1)).isoformat(),
+                project_id,
+                user_id,
+                "pending"
+            ))
+        
+        if 'created_at' in column_names:
+            cursor.execute("""
+                INSERT INTO tasks (title, description, priority, due_date, 
+                                project_id, assignee_id, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "Completed Overdue",
+                "Overdue but completed",
+                3,
+                (now - timedelta(days=2)).isoformat(),
+                project_id,
+                user_id,
+                "completed",
+                now.isoformat()
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO tasks (title, description, priority, due_date, 
+                                project_id, assignee_id, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                "Completed Overdue",
+                "Overdue but completed",
+                3,
+                (now - timedelta(days=2)).isoformat(),
+                project_id,
+                user_id,
+                "completed"
+            ))
+        
+        self.db.connection.commit()
+        
+        overdue_tasks = self.db.get_overdue_tasks()
+        
+        assert isinstance(overdue_tasks, list)
+        
+        print(f"Found {len(overdue_tasks)} overdue tasks")
+        for task in overdue_tasks:
+            print(f"  - {task.title}: due_date={task.due_date}, status={task.status}")
+        
+        assert len(overdue_tasks) == 1
+        assert overdue_tasks[0].title == "Overdue Task"
+        assert overdue_tasks[0].status == "pending"
+        task_due_date = overdue_tasks[0].due_date
+        if isinstance(task_due_date, str):
+            task_due_date_dt = datetime.fromisoformat(task_due_date)
+            assert task_due_date_dt < now
+        else:
+            assert task_due_date < now

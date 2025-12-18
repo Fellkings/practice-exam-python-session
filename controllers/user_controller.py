@@ -37,8 +37,7 @@ class UserController:
         user.id = user_id
         
         return user
-
-
+    
     def get_user(self, user_id: int) -> Optional[User]:
         return self.db_manager.get_user_by_id(user_id)
 
@@ -78,8 +77,7 @@ class UserController:
                     raise ValueError(f"Пользователь с именем '{username}' уже существует")
         
         return self.db_manager.update_user(user_id, **kwargs)
-
-
+    
     def delete_user(self, user_id: int) -> bool:
         return self.db_manager.delete_user(user_id)
 

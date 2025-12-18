@@ -26,9 +26,9 @@ def run_tests():
 
     # Список тестовых файлов
     test_files = [
-        "tests/test_user.py",
-        "tests/test_project.py",
-        "tests/test_task.py",
+        "tests/test_models.py",
+        "tests/test_controllers.py",
+        "tests/test_database.py",
     ]
 
     # Проверяем наличие тестовых файлов
@@ -52,7 +52,7 @@ def run_tests():
 
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/test_project.py", "-v"],
+            [sys.executable, "-m", "pytest", "tests/test_models.py", "-v"],
             capture_output=True,
             text=True,
         )
@@ -70,7 +70,7 @@ def run_tests():
 
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/test_task.py", "-v"],
+            [sys.executable, "-m", "pytest", "tests/test_controllers.py", "-v"],
             capture_output=True,
             text=True,
         )
@@ -88,7 +88,7 @@ def run_tests():
 
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/test_user.py", "-v"],
+            [sys.executable, "-m", "pytest", "tests/test_database.py", "-v"],
             capture_output=True,
             text=True,
         )
@@ -132,9 +132,9 @@ def run_tests():
     print("Для запуска всех тестов: pytest -v")
     print("Для запуска с покрытием: pytest -v --cov=. --cov-report=html")
     print("Для запуска конкретных тестов:")
-    print("  pytest -v tests/test_user.py")
-    print("  pytest -v tests/test_project.py")
-    print("  pytest -v tests/test_task.py")
+    print("  pytest -v tests/test_models.py")
+    print("  pytest -v tests/test_controllers.py")
+    print("  pytest -v tests/test_database.py")
 
     return True
 

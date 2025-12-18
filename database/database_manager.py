@@ -413,3 +413,75 @@ class DatabaseManager:
             return cursor.rowcount > 0
         except sqlite3.Error as e:
             raise Exception(f"Ошибка базы данных: {e}")
+        
+    def _row_to_task(self, row):
+        due_date = datetime.fromisoformat(row['due_date']) if row['due_date'] else None
+        
+        task = Task(
+            id=row['id'],
+            title=row['title'],
+            description=row['description'],
+            priority=row['priority'],
+            due_date=due_date,
+            project_id=row['project_id'],
+            assignee_id=row['assignee_id'],
+            status=row['status']
+        )
+        return task
+
+    def _row_to_project(self, row):
+        start_date = datetime.fromisoformat(row['start_date']) if row['start_date'] else None
+        end_date = datetime.fromisoformat(row['end_date']) if row['end_date'] else None
+        
+        project = Project(
+            id=row['id'],
+            name=row['name'],
+            description=row['description'],
+            start_date=start_date,
+            end_date=end_date,
+            status=row['status']
+        )
+        return project
+
+    def _row_to_user(self, row):
+        registration_date = datetime.fromisoformat(row['registration_date']) if row['registration_date'] else None
+        
+        user = User(
+            id=row['id'],
+            username=row['username'],
+            email=row['email'],
+            role=row['role'],
+            registration_date=registration_date
+        )
+        return user
+
+    def fetch_one(self, query, params=()):
+        cursor = self.connection.cursor()
+        cursor.execute(query, params)
+        return cursor.fetchone()
+    
+    def fetch_all(self, query, params=()):
+        cursor = self.connection.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    
+    def get_overdue_tasks(self) -> List[Task]:
+        query = """
+            SELECT * FROM tasks 
+            WHERE status != 'completed' 
+            AND due_date < ?
+            ORDER BY due_date ASC
+            """
+                
+        cursor = self.connection.cursor()
+        cursor.execute(query, (datetime.now().isoformat(),))
+        rows = cursor.fetchall()
+                
+        tasks = []
+        for row in rows:
+            task = self._row_to_task(row)
+            if task:
+                tasks.append(task)
+                
+        return tasks

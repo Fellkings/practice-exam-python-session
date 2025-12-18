@@ -63,7 +63,7 @@ class TaskController:
             if not isinstance(due_date, datetime):
                 raise ValueError("due_date должен быть datetime объектом")
             if due_date < datetime.now():
-                raise ValueError("Дата выполнения не может быть в прошлом")
+                print(f"Внимание: Задача {task_id} имеет прошедшую дату выполнения")
         
         if 'project_id' in kwargs:
             project_id = kwargs['project_id']

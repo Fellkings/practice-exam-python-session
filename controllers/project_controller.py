@@ -7,15 +7,15 @@ class ProjectController:
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
 
-    def add_project(self, name: str, description: str, 
-                   start_date: datetime, end_date: datetime) -> Project:
+    def add_project(self, name: str, description: str,
+               start_date: datetime, end_date: datetime) -> Project:
         if not name or not name.strip():
             raise ValueError("Название проекта не может быть пустым")
-        
+
         if start_date >= end_date:
             raise ValueError("Дата начала должна быть раньше даты окончания")
-        
-        if start_date < datetime.now().date():
+
+        if start_date < datetime.now():
             raise ValueError("Дата начала не может быть в прошлом")
         
         project = Project(

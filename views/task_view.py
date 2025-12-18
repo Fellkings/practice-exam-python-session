@@ -343,7 +343,7 @@ class TaskFormDialog:
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Новая задача" if not task else "Редактирование задачи")
-        self.dialog.geometry("400x400")
+        self.dialog.geometry("500x350")
         self.dialog.transient(parent)
         self.dialog.grab_set()
         
